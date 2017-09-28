@@ -32,16 +32,22 @@ public class wvv_network : MonoBehaviour
      */
     public static IEnumerator download_file(string url, System.Action<string> callback)
     {
-        WWW w = new WWW(url);
-        yield return w;
-        if (w.error != null)
+        UnityWebRequest request = UnityWebRequest.Get(url);
+        yield return request.Send();
+        if (request.isError)
         {
-            Debug.LogError(w.error);
-            callback("");
+            Debug.LogError(request.error);
         }
         else
         {
-            callback(w.text);
+            if (request.responseCode == 200)
+            {
+                callback(request.downloadHandler.text);
+            }
+            else
+            {
+                print(request.responseCode);
+            }
         }
     }
     /*
@@ -57,6 +63,29 @@ public class wvv_network : MonoBehaviour
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader(csrf_header_key, csrf_pwd); //csrf
         yield return request.Send();
-        callback(request);
+        if (request.isError)
+        {
+            Debug.LogError(request.error);
+        }
+        else
+        {
+            callback(request);
+        }
+    }
+    public static IEnumerator Get(string url, System.Action<UnityWebRequest> callback)
+    {
+        var request = new UnityWebRequest(url, "GET");
+        request.SetRequestHeader("Content-Type", "application/json");
+        // request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        request.SetRequestHeader(csrf_header_key, csrf_pwd); //csrf
+        yield return request.Send();
+        if (request.isError)
+        {
+            Debug.LogError(request.error);
+        }
+        else
+        {
+            callback(request);
+        }
     }
 }

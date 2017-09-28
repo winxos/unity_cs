@@ -31,11 +31,7 @@ public class wvv_audio_manager : MonoBehaviour
         stop_audio();
         audioSource.PlayOneShot(ask);
     }
-    public void show_ask_menu()
-    {
-        GameObject t = GameObject.Find("ImageTarget/Canvas/TextPanel");
-        t.SetActive(true);
-    }
+
     // Update is called once per frame
     void Update()
     {

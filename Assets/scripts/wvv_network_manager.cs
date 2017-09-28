@@ -12,12 +12,14 @@ using System;
 public class wvv_network_manager : MonoBehaviour
 {
     public static string app_version = "0.1.0";
-    public static string server_update_json = "http://localhost/ar_card.json";
-    public static string server_url = "http://192.168.8.175";
-    public static string server_route_api = "api/ar/v1/statistical";
+    public static string server_update_json = "http://api.aiesst.com/app/ar_poster.json";
+    public static string server_url = "http://api.aiesst.com";
+    public static string server_route_api = "ar/v1/statistical";
+    public static string server_state = "ar/v1/state";
     public static string uuid;
     private string update_url = "";
     public GameObject canvas;
+    private bool is_connected = false;
     // Use this for initialization
     void Start()
     {
@@ -34,17 +36,22 @@ public class wvv_network_manager : MonoBehaviour
         {
             Debug.Log("No net.");
         }
-        else if (Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork) //wan
+        else if (Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork || Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork) //wan
         {
-            Debug.Log("Use Wan.");
-            online_post();
+            Debug.Log("Use Wan || mobile data.");
             update_check();
+
         }
-        else if (Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork) //mobile data
-        {
-            Debug.Log("Use data.");
-            online_post();
-        }
+        StartCoroutine(wvv_network.Get(server_url + "/" + server_state, (request) =>
+         {
+             if (request.responseCode == 200)
+             {
+                 print("server connected.");
+                 is_connected=true;
+                 online_post();
+             }
+         }));
+
     }
 
     // Update is called once per frame
@@ -67,10 +74,6 @@ public class wvv_network_manager : MonoBehaviour
     {
         this.StartCoroutine(wvv_network.download_file(server_update_json, (value) =>
         {
-            if (value == "") //server json file get error.
-            {
-                return;
-            }
             JsonData jd = JsonMapper.ToObject(value);
             if (((IDictionary)jd).Contains("version")) //valid check.
             {
@@ -94,11 +97,11 @@ public class wvv_network_manager : MonoBehaviour
             }
             if (((IDictionary)jd).Contains("prompt_message"))
             {
-                Debug.Log("prompt:" + jd["prompt_message"]);
                 if (jd["prompt_message"].ToString().Trim() != "") //not blank
                 {
                     Text t = (Text)canvas.transform.Find("prompt/Text").gameObject.GetComponent<Text>();
                     t.text = jd["prompt_message"].ToString();
+                    print(t.text);
                     canvas.GetComponent<MenuManager>().GoToMenu(canvas.transform.Find("prompt").gameObject);
                 }
             }
@@ -107,28 +110,24 @@ public class wvv_network_manager : MonoBehaviour
     }
     public void online_post() //改用代理实现
     {
-        print("online post");
-        this.StartCoroutine(wvv_network.Post(server_url + "/" + server_route_api, build_post_data("online"), (request) =>
+        print("start online post");
+        StartCoroutine(wvv_network.Post(server_url + "/" + server_route_api, build_post_data("online"), (request) =>
           {
-              Debug.Log("Status Code: " + request.responseCode);
               if (request.responseCode == 200)
               {
-                  string text = request.downloadHandler.text;
-                  Debug.Log(text);
+                  print("online post succeeded.");
               }
           }
         ));
     }
     public void offline_post() //改用代理实现
     {
-        print("offline");
-        this.StartCoroutine(wvv_network.Post(server_url + "/" + server_route_api, build_post_data("offline"), (request) =>
+        print("start offline post");
+        StartCoroutine(wvv_network.Post(server_url + "/" + server_route_api, build_post_data("offline"), (request) =>
           {
-              Debug.Log("Status Code: " + request.responseCode);
               if (request.responseCode == 200)
               {
-                  string text = request.downloadHandler.text;
-                  Debug.Log(text);
+                  print("offline post succeeded.");
               }
           }
         ));
@@ -147,8 +146,7 @@ public class wvv_network_manager : MonoBehaviour
     }
     void OnApplicationQuit()
     {
-        if (Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork ||
-        Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork) //wan and mobile data
+        if (is_connected)
         {
             offline_post();
         }

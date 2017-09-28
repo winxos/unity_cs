@@ -9,22 +9,39 @@ public class wvv_event : MonoBehaviour
     // Use this for initialization
     public GameObject effect;
     public GameObject actor;
+    public Camera arcamera;
+    private bool is_show_actor_finished = false;
+    private bool is_found = false;
     void Start()
     {
         wam = GameObject.Find("scripts").GetComponent<wvv_audio_manager>();
         effect.SetActive(false);
         actor.SetActive(false);
     }
-
+    void distance_check()
+    {
+        Vector3 vector = wvv_utils.distance_between_camera_and_target(arcamera, actor);
+        if (vector.y < 0)
+        {
+            actor.SetActive(false);
+        }
+        else
+        {
+            actor.SetActive(true);
+        }
+    }
     // Update is called once per frame
     void Update()
     {
-
+        if (is_found && is_show_actor_finished)
+        {
+            distance_check();
+        }
     }
     private void show_actor()
     {
         actor.SetActive(true);
-
+        is_show_actor_finished = true;
         StartCoroutine(WaitDoAction(1, () =>
         {
             effect.SetActive(false);
@@ -34,12 +51,17 @@ public class wvv_event : MonoBehaviour
     }
     public void found()
     {
+        print("found");
         effect.SetActive(true);
+        is_show_actor_finished = false;
+        is_found = true;
         StartCoroutine(WaitDoAction(2, show_actor));
     }
     public void lost()
     {
+        print("lost");
         wam.stop_audio();
+        is_found = false;
         GameObject t = GameObject.Find("ImageTarget/Canvas/TextPanel");
         t.SetActive(false);
         effect.SetActive(false);
@@ -126,7 +148,7 @@ public class wvv_event : MonoBehaviour
             wam.play_bye_audio(2);
         }));
     }
-    IEnumerator WaitDoAction(float t, System.Action action)
+    public static IEnumerator WaitDoAction(float t, System.Action action)
     {
         // suspend execution for 5 seconds
         yield return new WaitForSeconds(t);

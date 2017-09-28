@@ -13,7 +13,12 @@ public class wvv_utils : MonoBehaviour
         print("exit");
         Application.Quit();
     }
+
     // Update is called once per frame
+    public static Vector3 distance_between_camera_and_target(Camera camera, GameObject target)
+    {
+        return camera.WorldToViewportPoint(target.transform.position);
+    }
     void Update()
     {
         if (Input.GetKey(KeyCode.Escape))
